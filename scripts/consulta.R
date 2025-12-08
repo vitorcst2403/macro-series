@@ -730,7 +730,11 @@ consulta <- function(nome, ...,
         tema <- rec_tema(regra)
         descricao <- rec_descricao(regra)
         
-        repo_wd <- "J:/AP_DEPEC_DPTO/APE_PUBLICO/APP_Depec/Gerencias/GECON/22. Dados/Consultas/gemac-series"
+        if(is.null(getOption("macroseries.data_path"))) {
+          stop("Defina o endereço do repo com 'options(macroseries.data_path = J:/meu/repo'")
+        }
+        
+        repo_wd <- getOption("macroseries.data_path")
         
         suf_medidas <- c(
           "Variação mensal"= "varm",
@@ -778,7 +782,11 @@ consulta <- function(nome, ...,
         tema <- rec_tema(regra)
         descricao <- rec_descricao(regra)
         
-        repo_wd <- "J:/AP_DEPEC_DPTO/APE_PUBLICO/APP_Depec/Gerencias/GECON/22. Dados/Consultas/gemac-series"
+        if(is.null(getOption("macroseries.data_path"))) {
+          stop("Defina o endereço do repo com 'options(macroseries.data_path = J:/meu/repo'")
+        }
+        
+        repo_wd <- getOption("macroseries.data_path")
         
         suf_medidas <- c(
           "Variação mensal"= "varm",
@@ -1780,6 +1788,7 @@ consulta <- function(nome, ...,
                            frequencia = frequencia,
                            territorio = territorio,
                            sa = FALSE,
+                           mods = NULL,
                            inicio = inicio,
                            cache = cache,
                            force = force,
