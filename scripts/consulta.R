@@ -1,6 +1,7 @@
 consulta <- function(nome,
                      ...,
                      inicio = NULL,
+                     fim = NULL,
                      atualiza = FALSE,
                      ignora_nulo = TRUE) {
   # função de consulta às macro series
@@ -72,6 +73,8 @@ consulta <- function(nome,
   
   ms <- Reduce(function(x, y)
     combina_serie(x, y, fill = FALSE), ms_series)
+  
+  ms <- janela(ms, inicio = inicio, fim = fim)
   
   return(ms)
 }

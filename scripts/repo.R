@@ -36,9 +36,11 @@ extrai_repo <- function(regra, sa = FALSE) {
   
   serie_repo <- paste(serie, suf_medidas[medida], frequencia, suf_territorios[territorio], sep = "_")
   if (sa) serie_repo <- paste0(serie_repo, "_sa")
-  serie_repo <- paste0("repo/", tema, "/", serie_repo, ".rds")
-  
-  serie_repo <- paste0(repo_wd, "/", serie_repo)
+  caminho_serie <- paste0(repo_wd, "repo/", tema)
+  if (!dir.exists(caminho_serie)) {
+    dir.create(caminho_serie, recursive = TRUE)
+  }
+  serie_repo <- paste0(caminho_serie, "/", serie_repo, ".rds")
   
   if(!file.exists(serie_repo)) {
     message(cat("Série ", descricao, medida, " inexistente no repositório"))
