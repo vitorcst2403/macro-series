@@ -35,7 +35,7 @@ print.macro_serie <- function(x, ...) {
     attr(dados, "index") <- attr(x, "index")
   }
   
-  print(dados)
+  print(tail(dados, 12))
   invisible(dados)
 }
 
