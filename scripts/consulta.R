@@ -5,9 +5,9 @@ consulta <- function(nome,
                      atualiza = FALSE,
                      ignora_nulo = TRUE) {
   # função de consulta às macro series
-  gemac_series <- readRDS(file = "data/gemac_series.rds")
-  codigos_7060 <- readRDS(file = "data/codigos_7060.rds")
-  names_tbl <- readRDS(file = "data/names_tbl.rds")
+  gemac_series <- get_gemac_series()
+  codigos_7060 <- get_codigos_7060()
+  names_tbl <- get_names_tbl()
   
   opcao_original <- getOption("macroseries.atualiza", FALSE)
   
@@ -53,7 +53,7 @@ consulta <- function(nome,
   
   # Realiza a extração e retorna --------------------------------------------
   
-  ms_series <- obtem_series(
+  ms_series <- coleta_series(
     series = args[["serie"]],
     medidas = args[["medida"]],
     frequencias = args[["frequencia"]],

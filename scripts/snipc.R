@@ -95,9 +95,8 @@ snipc <- function(tabela,
                         var,
                         terr), collapse = "_")
   
-  if(exists(table_name, env = .cache_env)) {
-    return(get(table_name, envir = .cache_env))
-  }
+  series_name <-paste0("snipc::", tab, "::", cod, "::", var, "::", terr)
+  if (cache_has(series_name)) return(cache_get(series_name))
   
   t_numero = NULL
   
@@ -157,7 +156,7 @@ snipc <- function(tabela,
     valor = as.numeric(valor)
   )
   
-  assign(table_name, dados, envir = .cache_env)
+  cache_set(series_name, dados)
   
   return(dados)
 }

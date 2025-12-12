@@ -219,13 +219,12 @@ resume_serie.default <- function(x, fun, ...) {
 resume_serie.macro_serie <- function(x, 
                                      fun, 
                                      ...) {
-  dots <- match.call(expand.dots = FALSE)$...
-  
-  if (length(dots) == 0) {
-    extra_args <- NULL
-  } else {
-    extra_args <- list(...)
-  }
+  # NOVA IMPLEMENTAÇÃO (sem eval(parse(...)))
+  # - aceita fun como função
+  # - aceita fun como string para retro-compatibilidade (convertida via rlang),
+  #   avaliada em ambiente controlado com dados: x (vetor) e quaisquer args extras.
+  dots <- list(...)
+  extra_args <- if (length(dots) == 0) list() else dots
   
   temas <- rec_tema(x)
   if(length(unique(temas)) == 1) {
@@ -263,71 +262,70 @@ resume_serie.macro_serie <- function(x,
     x <- matrix(x, ncol = 1)
   } 
   
-  ms <- apply(x, 1, function(row) {
-    tryCatch({
-      env <- new.env()
-      env$x <- row
-      
-      if(!is.null(extra_args)) {
-        list2env(extra_args, envir = env)
-      }
-      
-      eval(parse(text = fun), envir = env)
-    }, error = function(e) NA)
-  })
-  
-  if(is.null(dim(ms))) {
-    matrix = FALSE
+  # prepara função que será aplicada a cada linha:
+  if (is.function(fun)) {
+    fun_fn <- function(row) {
+      tryCatch({
+        do.call(fun, c(list(row), extra_args))
+      }, error = function(e) NA)
+    }
   } else {
-    matrix = TRUE
+    stop("resume_serie: 'fun' deve ser função.")
   }
   
-  if(matrix) {
-    ms <- t(ms)
+  # aplica por linha
+  ms_res <- apply(x, 1, function(row) fun_fn(row))
+  
+  # determina formato do resultado
+  is_matrix <- !is.null(dim(ms_res))
+  if (is_matrix) {
+    ms_res <- t(ms_res)
+    dim_ms <- dim(ms_res)[2]
+  } else {
+    dim_ms <- 1
   }
   
-  if(all(is.na(ms))) {
+  if(all(is.na(ms_res))) {
     return(NULL)
   }
   
+  # atribui atributos de saída coerentes com tipo (ts / zoo)
   if(freq != "D") {
-    if(matrix) {
-      dim_ms <- dim(ms)[2]
-      
-      attr(ms, "tema") <- rep(tema, dim_ms)
-      attr(ms, "descricao") <- paste0("Série calculada ", 1:dim_ms)
-      attr(ms, "serie") <- paste0("calc_", 1:dim_ms)
-      attr(ms, "unidade") <- rep(unidade, dim_ms)
-      attr(ms, "medida") <- rep(medida, dim_ms)
-      attr(ms, "inicio") <- ini
-      attr(ms, "fim") <- fim
-      attr(ms, "frequencia") <- freq
-      attr(ms, "class") <- c("macro_serie", "mts", "ts", "matrix", "array")
-      attr(ms, "tsp") <- attributes(x)$tsp
+    if(is_matrix) {
+      attr(ms_res, "tema") <- rep(tema, dim_ms)
+      attr(ms_res, "descricao") <- paste0("Série calculada ", 1:dim_ms)
+      attr(ms_res, "serie") <- paste0("calc_", 1:dim_ms)
+      attr(ms_res, "unidade") <- rep(unidade, dim_ms)
+      attr(ms_res, "medida") <- rep(medida, dim_ms)
+      attr(ms_res, "inicio") <- ini
+      attr(ms_res, "fim") <- fim
+      attr(ms_res, "frequencia") <- freq
+      attr(ms_res, "class") <- c("macro_serie", "mts", "ts", "matrix", "array")
+      attr(ms_res, "tsp") <- attributes(x)$tsp
     } else {
-      attr(ms, "tema") <- tema
-      attr(ms, "descricao") <- "Série calculada"
-      attr(ms, "serie") <- "calc_1"
-      attr(ms, "unidade") <- unidade
-      attr(ms, "medida") <- medida
-      attr(ms, "inicio") <- ini
-      attr(ms, "fim") <- fim
-      attr(ms, "frequencia") <- freq
-      attr(ms, "class") <- c("macro_serie", "ts")
-      attr(ms, "tsp") <- attributes(x)$tsp
+      attr(ms_res, "tema") <- tema
+      attr(ms_res, "descricao") <- "Série calculada"
+      attr(ms_res, "serie") <- "calc_1"
+      attr(ms_res, "unidade") <- unidade
+      attr(ms_res, "medida") <- medida
+      attr(ms_res, "inicio") <- ini
+      attr(ms_res, "fim") <- fim
+      attr(ms_res, "frequencia") <- freq
+      attr(ms_res, "class") <- c("macro_serie", "ts")
+      attr(ms_res, "tsp") <- attributes(x)$tsp
     }
   } else {
-    attr(ms, "tema") <- rep(tema, dim_ms)
-    attr(ms, "descricao") <- paste0("Série calculada ", 1:dim_ms)
-    attr(ms, "serie") <- paste0("calc_", 1:dim_ms)
-    attr(ms, "unidade") <- rep(unidade, dim_ms)
-    attr(ms, "medida") <- rep(medida, dim_ms)
-    attr(ms, "inicio") <- ini
-    attr(ms, "fim") <- fim
-    attr(ms, "frequencia") <- freq
-    attr(ms, "class") <- c("macro_serie", "zoo")
+    # diária (zoo)
+    attr(ms_res, "tema") <- rep(tema, dim_ms)
+    attr(ms_res, "descricao") <- paste0("Série calculada ", 1:dim_ms)
+    attr(ms_res, "serie") <- paste0("calc_", 1:dim_ms)
+    attr(ms_res, "unidade") <- rep(unidade, dim_ms)
+    attr(ms_res, "medida") <- rep(medida, dim_ms)
+    attr(ms_res, "inicio") <- ini
+    attr(ms_res, "fim") <- fim
+    attr(ms_res, "frequencia") <- freq
+    attr(ms_res, "class") <- c("macro_serie", "zoo")
   }
   
-  return(ms)
+  return(ms_res)
 }
-

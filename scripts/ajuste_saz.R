@@ -38,11 +38,6 @@ ajuste_saz.macro_serie <- function(ms, ...) {
     return(ms)
   })
   
-  # diag <- summary(sa)$diagnostics
-  # if (diag$M7 > 1.0 || diag$Qstat.pvalue < 0.05) {
-  #   message("Diagnóstico indica picos sazonais no espectro de resíduos.")
-  # }
-  
   ms_final <- seasonal::final(sa)
   attributes(ms_final) <- attributes(ms)
   

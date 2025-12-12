@@ -7,6 +7,11 @@ class_regra <- function(serie,
   # Cria regra de formação com base no nome da 'serie' e na lista pré definida de séries 
   
   serie = serie[1]
+  gemac_series <- get_gemac_series()
+  
+  if (is.null(gemac_series[[serie]])) {
+    stop(sprintf("Série '%s' não encontrada em gemac_series", serie), call. = FALSE)
+  }
   
   serie_info <- gemac_series[[serie]]$info
   serie_padrao <- gemac_series[[serie]]$padrao
@@ -94,24 +99,32 @@ attr_regra <- function(ms, regra) {
 # cria funções que extraem os componentes da regra ou serie
 
 atribs <- c("serie", "unidade", "inicio", "fim", "medida", "frequencia", "territorio", "tema", "descricao")
-funs <- list(inicio = "as.Date", fim = "as.Date")
+# indicar wrappers como funções (ao invés de strings)
+funs <- list(inicio = as.Date, fim = as.Date)
 
-for(atrib in atribs) {
-  wrapper <- if (!is.null(funs[[atrib]])) funs[[atrib]] else NULL
-  
-  if(!is.null(wrapper)) {
-    code <- sprintf(
-      'rec_%s <- function(x) { %s(attr(x, "%s")) }',
-      atrib, wrapper, atrib
-    )
-    eval(parse(text = code))
+# Factory robusta que cria funções rec_<atrib> fechando os valores corretos
+make_rec <- function(atrib, wrapper = NULL, envir = parent.frame()) {
+  # Usamos local(...) para capturar (fixar) os valores de 'atrib' e 'wrapper'
+  if (!is.null(wrapper)) {
+    f <- local({
+      a <- atrib
+      w <- wrapper
+      function(x) w(attr(x, a))
+    })
   } else {
-    code <- sprintf(
-      'rec_%s <- function(x) { attr(x, "%s") }',
-      atrib, atrib
-    )
-    eval(parse(text = code))
+    f <- local({
+      a <- atrib
+      function(x) attr(x, a)
+    })
   }
+  # garante que a função tem um argumento 'x'
+  formals(f) <- alist(x = )
+  # NÃO sobrescrever o ambiente da função: mantemos a closure criada pelo local()
+  assign(paste0("rec_", atrib), f, envir = envir)
 }
 
-
+# cria as funções rec_... no ambiente global (ou outro envir passado)
+for (atrib in atribs) {
+  wrapper <- if (!is.null(funs[[atrib]])) funs[[atrib]] else NULL
+  make_rec(atrib, wrapper, envir = .GlobalEnv)
+}
