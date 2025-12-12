@@ -558,6 +558,7 @@ obtem_series <- function(series,
           if (rec_fim(ms_atual) > rec_fim(ms)) {
             ms <- combina_serie(ms, ms_atual, fill = FALSE)
             ms <- resume_serie(ms, fun = "aglut(x)")
+            ms <- attr_regra(ms, regra)
             salva_repo(ms, regra)
             
             return(ms)

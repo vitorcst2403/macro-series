@@ -36,7 +36,7 @@ extrai_repo <- function(regra, sa = FALSE) {
   
   serie_repo <- paste(serie, suf_medidas[medida], frequencia, suf_territorios[territorio], sep = "_")
   if (sa) serie_repo <- paste0(serie_repo, "_sa")
-  caminho_serie <- paste0(repo_wd, "repo/", tema)
+  caminho_serie <- paste0(repo_wd, "/repo/", tema)
   if (!dir.exists(caminho_serie)) {
     dir.create(caminho_serie, recursive = TRUE)
   }

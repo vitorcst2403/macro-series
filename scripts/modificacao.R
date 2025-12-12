@@ -181,7 +181,7 @@ diferenca <- function(ms, n) {
   freq <- rec_frequencia(ms)
   inicio <- Reduce(function(acc, ...) prox_periodo(acc, freq), x = seq_len(n), init = inicio)
   
-  x <- diff(ms, lag = n)
+  x <- abs(diff(ms, lag = n))
   
   attributes(x) <- c(attributes(x),attrs[setdiff(names(attrs), names(attributes(x)))])
   attr(x, "inicio") <- inicio

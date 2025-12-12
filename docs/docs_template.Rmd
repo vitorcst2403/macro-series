@@ -1,0 +1,15 @@
+---
+title: ""
+output:
+  word_document: default
+# O knit abaixo executa código R inline: ele "source" o script local e chama a função
+# knit_para_template_local. Isso permite ao usuário apenas apertar Knit sem instalar pacote.
+knit: (function(input, encoding) { source("scripts/relatorio.R"); knit_para_template_local(input) })
+---
+
+# `r texto("Título do relatório: edite apenas o texto dentro de texto(...)")`
+
+```{r p1, echo=FALSE}
+texto("Parágrafo introdutório: substitua o texto entre aspas em texto(...) com a frase desejada.")
+```
+
