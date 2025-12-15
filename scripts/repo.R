@@ -6,8 +6,32 @@ sufixos_medi <- function(medida) {
     "Variação mensal" = "varm",
     "Peso" = "peso",
     "Contribuição" = "contrib",
-    "Inflação relativa" = "inflarel"
-  )
+    "Inflação relativa" = "inflarel",
+    "Saldo" = "saldo",
+    "Líquido" = "liqui",
+    "Receita" = "recei", 
+    "Despesa" = "despe", 
+    "Exportação de bens" = "expor", 
+    "Importação de bens" = "impor", 
+    "Exportação positivas" = "expos", 
+    "Exportação negativas" = "exneg", 
+    "Ingressos" = "ingre", 
+    "Saídas" = "saida", 
+    "Amortizações recebidas no exterior" = "amrec", 
+    "Créditos concedidos ao exterior" = "crcon", 
+    "Créditos recebidos do exterior" = "crrec", 
+    "Amortizações pagas ao exterior" = "ampag", 
+    "Venda" = "venda", 
+    "Aquisição" = "aquis", 
+    "Ingresso" = "ingre", 
+    "Saída" = "saida", 
+    "Ativos" = "ativo", 
+    "Passivos" = "passi", 
+    "Receitas" = "recei", 
+    "Despesas" = "despe", 
+    "Amortização" = "amort", 
+    "PIB acumulado dos últimos 12 meses em dólares" = "pibacum"
+    )
   
   if (!medida %in% names(suf_medidas)) {
     stop(sprintf("Medida desconhecida: '%s'. Medidas válidas: %s",

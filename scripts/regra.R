@@ -126,5 +126,5 @@ make_rec <- function(atrib, wrapper = NULL, envir = parent.frame()) {
 # cria as funções rec_... no ambiente global (ou outro envir passado)
 for (atrib in atribs) {
   wrapper <- if (!is.null(funs[[atrib]])) funs[[atrib]] else NULL
-  make_rec(atrib, wrapper, envir = .GlobalEnv)
+  make_rec(atrib, wrapper, envir = gemac)
 }
