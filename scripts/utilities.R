@@ -13,30 +13,37 @@ aglut <- function(x) {
 
 # Print -------------------------------------------
 
-print.macro_serie <- function(x, ...) {
+print.macro_serie <- function(x, comp = NULL, ...) {
   # print para objeto macro_serie
   
+  if(is.null(comp)) comp = 12
+  
   dados <- round(as.numeric(x), 2)
+  freq <- rec_frequencia(x)
   
   if(inherits(x, "mts")) {
     class(dados) <- c("mts", "ts")
     attr(dados, "dim") <- attr(x, "dim")
     attr(dados, "dimnames") <- attr(x, "dimnames")
     attr(dados, "tsp") <- attr(x, "tsp")
+    print(tail(dados, comp))
+    invisible(dados)
   }
   
   if(inherits(x, "ts")) {
     class(dados) <- "ts"
     attr(dados, "tsp") <- attr(x, "tsp")
+    fnums <- c("Q" = 24, "M" = 12, "T" = 4, "S" = 2, "A" = 1)
+    print(tail(dados, comp*fnums[freq]))
+    invisible(dados)
   }
   
   if(inherits(x, "zoo")) {
     class(dados) <- "zoo"
     attr(dados, "index") <- attr(x, "index")
+    print(tail(dados, comp))
+    invisible(dados)
   }
-  
-  print(tail(dados, 12))
-  invisible(dados)
 }
 
 # Janela ------------------------------------------------------------------
