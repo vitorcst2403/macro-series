@@ -82,11 +82,11 @@ get_gemac_series <- function() {
   obj
 }
 
-get_names_tbl <- function() {
-  key <- "meta::names_tbl"
+get_names_list <- function() {
+  key <- "meta::names_list"
   if (cache_has(key)) return(cache_get(key))
-  path <- "data/names_tbl.rds"
-  if (!file.exists(path)) stop("Arquivo 'data/names_tbl.rds' não encontrado.")
+  path <- "data/names_list.rds"
+  if (!file.exists(path)) stop("Arquivo 'data/names_list.rds' não encontrado.")
   obj <- readRDS(path)
   cache_set(key, obj)
   obj

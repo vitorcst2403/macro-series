@@ -1,6 +1,5 @@
 coleta_series <- function(series, medidas = NULL, frequencias = NULL, territorios = NULL,
-                          inicio = NULL, ignora_nulo = TRUE, combina = TRUE, .local_cache = NULL) {
-  if (is.null(.local_cache)) .local_cache <- make_local_cache()
+                          inicio = NULL, ignora_nulo = TRUE, .local_cache) {
   # validações e preparação de vetores
   
   if (!is.character(series)) {
@@ -73,12 +72,8 @@ coleta_series <- function(series, medidas = NULL, frequencias = NULL, territorio
   ms_list <- Filter(function(x)
     !is.null(x), ms_list)
   
-  if (combina) {
-    ms <- Reduce(function(x, y)
-      combina_serie(x, y, fill = FALSE), ms_list)
-  } else {
-    return(ms_list)
-  }
+  ms <- Reduce(function(x, y)
+    combina_serie(x, y, fill = FALSE), ms_list)
   
   return(ms)
 }

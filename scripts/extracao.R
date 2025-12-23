@@ -42,7 +42,9 @@ extrai_serie <- function(regra, inicio = NULL,
 
 # wrapper para extracao safe
 extrai_safe <- function(serie, medida, frequencia, territorio, inicio, 
-                        atual = getOption("macroseries.atualiza", FALSE), ignora_nulo = TRUE, .local_cache) {
+                        atual = getOption("macroseries.atualiza", FALSE), ignora_nulo = TRUE, 
+                        .local_cache = NULL) {
+  if (is.null(.local_cache)) .local_cache <- make_local_cache()
   tryCatch({
     regra <- class_regra(serie, medida = medida, frequencia = frequencia, territorio = territorio)
     if (is.null(regra)) return(NULL)
