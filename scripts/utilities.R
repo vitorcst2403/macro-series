@@ -1,7 +1,100 @@
-# Aglutina ----------------------------------------------------------------
+# Print -------------------------------------------
 
+print.macro_serie <- function(ms, ...) {
+  # print para objeto macro_serie
+  serie <- ms$serie
+  print(serie)
+}
+
+# Janela ------------------------------------------------------------------
+
+janela <- function(...) {
+  UseMethod("janela")
+}
+
+janela.default <- function(...) {
+  stop("Objeto deve ser de classe 'macro_serie'.")
+}
+
+janela.macro_serie <- function(ms, inicio = NULL, fim = NULL, nonNA = TRUE) {
+  # window para objeto macro_serie
+  
+  meta <- ms$meta
+  
+  freq <- meta$frequencia
+  inicio_serie <- meta$inicio
+  if(is.null(inicio)) {
+    inicio <- inicio_serie
+  } 
+  inicio <- as.Date(inicio)
+  fim_serie <- meta$fim
+  if (is.null(fim)) {
+    fim <- fim_serie
+  }
+  fim <- as.Date(fim)
+  
+  datas <- gera_datas(freq = freq,
+                      inicio = inicio,
+                      fim = fim)
+  
+  serie <- ms$serie
+  
+  dtf <- function(date, freq) {
+    freqs <- c("Q" = 24,
+               "M" = 12,
+               "T" = 4,
+               "S" = 2,
+               "A" = 1)
+    mes <- lubridate::month(date)
+    dia <- lubridate::day(date)
+    dia <- (dia-1)/14 # 0 ou 1
+    return((mes-1)*freqs[freq]/12 + dia + 1)
+  }
+  
+  if(inherits(serie, "ts")) {
+    serie <- window(serie, 
+                    start = c(lubridate::year(inicio), dtf(inicio, freq)),
+                    end = c(lubridate::year(fim), dtf(fim, freq))
+    )
+    if(nonNA) {
+      inicio_vec <- time(serie[!is.na(serie)])[1]
+      fim_vec <- tail(time(serie[!is.na(serie)]), 1)
+      
+      serie <- window(serie, 
+                      start = inicio_vec,
+                      end = fim_vec)
+    }
+  }
+  
+  if(inherits(serie, "zoo")) {
+    serie <- window(serie,
+                    start = inicio,
+                    end = fim)
+    
+    if(nonNA) {
+      inicio_vec <- index(serie[!is.na(serie)])[1]
+      fim_vec <- index(time(serie[!is.na(serie)]), 1)
+      
+      serie <- window(serie, 
+                      start = inicio_vec,
+                      end = fim_vec)
+    }
+  }
+  
+  meta$inicio <- inicio
+  meta$fim <- fim
+  
+  ms <- list(serie = serie,
+             meta = meta)
+  class(ms) <- "macro_serie"
+  
+  return(ms)
+}
+
+# Funções customizadas ----------------------------------------------------
+
+# Aglutina
 aglut <- function(x) {
-  # aglutina valores de um vetor
   x <- as.numeric(x)  
   non_na <- x[!is.na(x)]
   if (length(non_na) > 0) {
@@ -11,145 +104,23 @@ aglut <- function(x) {
   }
 }
 
-# Print -------------------------------------------
-
-print.macro_serie <- function(x, comp = NULL, ...) {
-  # print para objeto macro_serie
-  
-  if(is.null(comp)) comp = 12
-  
-  dados <- round(as.numeric(x), 2)
-  freq <- rec_frequencia(x)
-  
-  if(inherits(x, "mts")) {
-    class(dados) <- c("mts", "ts")
-    attr(dados, "dim") <- attr(x, "dim")
-    attr(dados, "dimnames") <- attr(x, "dimnames")
-    attr(dados, "tsp") <- attr(x, "tsp")
-    print(tail(dados, comp))
-    invisible(dados)
-  }
-  
-  if(inherits(x, "ts")) {
-    class(dados) <- "ts"
-    attr(dados, "tsp") <- attr(x, "tsp")
-    fnums <- c("Q" = 24, "M" = 12, "T" = 4, "S" = 2, "A" = 1)
-    print(tail(dados, comp*fnums[freq]))
-    invisible(dados)
-  }
-  
-  if(inherits(x, "zoo")) {
-    class(dados) <- "zoo"
-    attr(dados, "index") <- attr(x, "index")
-    print(tail(dados, comp))
-    invisible(dados)
-  }
+# Contribuição IPCA
+contr_fun <- function(x) {
+  x[1]*x[2]/100
 }
 
-# Janela ------------------------------------------------------------------
+# Inflação relativa
+inflarel_fun <- function(x) {
+  (1+x[1]/100)/(1+x[2]/100)-1
+}
 
-janela <- function(x, inicio = NULL, fim = NULL, nonNA = TRUE) {
-  # window para objeto macro_serie
-  
-  freq <- rec_frequencia(x)
-  attrib <- attributes(x)
-  inicio_serie <- rec_inicio(x)
-  fim_serie <- rec_fim(x)
-  
-  freqs <- c(
-    "D" = 365,
-    "Q" = 24,
-    "M" = 12,
-    "T" = 4,
-    "S" = 2,
-    "A" = 1
-  )
-  
-  if (freq %in% names(freqs)) {
-    if(!is.null(inicio)) {
-      inicio = as.Date(inicio)
-      
-      if(inicio > fim_serie) {
-        return(NULL)
-      }
-      
-      if(inicio >= inicio_serie) {
-        inicio_serie <- inicio
-      } 
-      
-      inicio_ano <- lubridate::year(inicio)
-      if (freq == "Q") {
-        if(!(lubridate::day(inicio) %in% c(1, 15))) {
-          stop("Data de início inválida para frequência quinzenal")
-        } 
-        
-        inicio_freq <- (lubridate::month(inicio) - 1)*2 + (2 - lubridate::day(inicio) %% 15)
-      } else {
-        inicio_freq <- (lubridate::month(inicio)-1)*12/freqs[freq] + 1
-      }
-      
-      inicio_vec <- c(inicio_ano, inicio_freq)
-    } else {
-      if(nonNA) {
-        inicio_vec <-  time(x)[which(!is.na(x))[1]]
-        if(freq != "Q") {
-          inicio_serie <- as.Date(paste(floor(inicio_vec), 
-                                        round(((inicio_vec-floor(inicio_vec))*12)+1), 
-                                        1, sep = "-"))
-        } else {
-          inicio_dia <- ifelse(round((inicio_vec-floor(inicio_vec))*24) %% 2 == 0, 1, 15)
-          inicio_serie <- as.Date(paste(floor(inicio_vec), 
-                                        round(((inicio_vec-floor(inicio_vec))*12)+1), 
-                                        inicio_dia, sep = "-"))
-        }
-      } else {
-        inicio_vec = NULL
-      }
-    }
-    
-    
-    if(!is.null(fim)) {
-      fim = as.Date(fim)
-      
-      if(fim < inicio_serie) {
-        return(NULL)
-      }
-      
-      if(fim <= fim_serie) {
-        fim_serie <- fim
-      }
-      
-      fim_ano <- lubridate::year(fim)
-      if (freq == "Q") {
-        if(!(lubridate::day(fim) %in% c(1, 15))) {
-          stop("Data de fim inválida para frequência quinzenal")
-        } 
-        
-        fim_freq <- (lubridate::month(fim) - 1)*2 + (2 - lubridate::day(fim) %% 15)
-      } else {
-        fim_freq <- (lubridate::month(fim)-1)*12/freqs[freq] + 1
-      }
-      fim_vec <- c(fim_ano, fim_freq)
-    } else {
-      fim_vec = NULL
-    }
-  } 
-  
-  serie <- x
-  class(serie) <- setdiff(class(serie), "macro_serie")
-  
-  suppressWarnings({
-    serie <- window(serie, 
-                    start = inicio_vec,
-                    end = fim_vec)
-  })
-  
-  attr_serie <- attributes(serie)[setdiff(names(attributes(serie)), "class")]
-  attrib[names(attr_serie)] <- attr_serie
-  attributes(serie) <- attrib
-  attr(serie, "inicio") <- as.character(inicio_serie)
-  attr(serie, "fim") <- as.character(fim_serie)
-  
-  return(serie)
+# Difusão
+dif_fun <- function(x) {
+  sum(x>0)/length(x)*100
+}
+
+# Participação percentual
+part_fun <- function(x) {
+  x[1]/x[2]*100
 }
 

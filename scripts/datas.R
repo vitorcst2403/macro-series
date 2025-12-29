@@ -36,6 +36,8 @@ gera_datas <- function(freq,
                      to = fim,
                      by = bys[freq])
   }
+  
+  return(data)
 }
 
 
@@ -64,18 +66,20 @@ ante_periodo <- function(freq, date) {
 
 # Lista datas ----------------------------------
 
-lista_datas <- function(serie) {
+lista_datas <- function(ms) {
   UseMethod("lista_datas")
 }
 
-lista_datas.default <- function(serie) {
+lista_datas.default <- function(ms) {
   stop("Método válido somente para objeto macro_serie")
 }
 
-lista_datas.macro_serie <- function(serie) {
-  freq <- rec_frequencia(serie)
-  inicio <- rec_inicio(serie)
-  fim <- rec_fim(serie)
+lista_datas.macro_serie <- function(ms) {
+  freq <- ms$meta$frequencia
+  inicio <- ms$meta$inicio
+  fim <- ms$meta$fim
+  
+  serie <- ms$serie
   
   if(inherits(serie, "ts")) {
     data <- gera_datas(freq = freq,

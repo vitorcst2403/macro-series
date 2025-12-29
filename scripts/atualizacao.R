@@ -18,11 +18,14 @@ atual_serie.default <- function(regra, ...) {
 atual_serie.snipc_puro <- function(regra, ...) {
   # Método para extração de série do SNIPC
   
-  cod <- regra$codigo
-  tab <- regra$tabela
-  terr <- rec_territorio(regra)
-  freq <- rec_frequencia(regra)
-  medi <- rec_medida(regra)
+  meta <- regra$meta
+  
+  cod <- regra$dados$codigo
+  tab <- regra$dados$tabela
+  
+  terr <- meta$territorio
+  freq <- meta$frequencia
+  medi <- meta$medida
   
   dados <- snipc(
     tabela = tab,
@@ -44,8 +47,8 @@ atual_serie.snipc_puro <- function(regra, ...) {
 
 # cria série do SGS com base na regra
 atual_serie.sgs_puro <- function(regra, periodo_inicial, ...) {
-  codigo <- regra$codigo
-  freq <- rec_frequencia(regra)
+  codigo <- regra$dados$codigo
+  freq <- regra$dados$frequencia
   
   inicio_diario = NULL
   if (freq == "D") {
@@ -62,7 +65,8 @@ atual_serie.sgs_puro <- function(regra, periodo_inicial, ...) {
     return(NULL)
   }
   
-  ms <- ms_dados(dados = dados, regra = regra)
+  ms <- ms_dados(dados = dados, 
+                 regra = regra)
   
   return(ms)
 }
@@ -73,28 +77,34 @@ atual_serie.sgs_puro <- function(regra, periodo_inicial, ...) {
 
 ## Séries combinadas ----------------------------------------------------------
 
-atual_serie.series_resume <- function(regra, periodo_inicial, .local_cache, ...) {
+atual_serie.series_resume <- function(regra, periodo_inicial, ...) {
   # Resume uma coleção de séries com base numa função
   
-  freq <- rec_frequencia(regra)
-  inicio <- rec_inicio(regra)
+  meta <- regra$meta
+  dados <- regra$dados
+  
+  freq <- meta$frequencia
+  inicio <- meta$inicio
   
   periodo_inicial <- as.Date(max(periodo_inicial, inicio))
   
-  series <- regra$series
-  medidas <- regra$medidas
-  frequencias <- regra$frequencias
-  territorios <- regra$territorios
-  func <- regra$func
+  series <- dados$series
+  medidas <- dados$medidas
+  frequencias <- dados$frequencias
+  territorios <- dados$territorios
+  func <- dados$func
+  
+  if(!is.function(func)) {
+    func = eval(parse(text = func))
+  }
   
   ms <- coleta_series(
     series = series,
     medidas = medidas,
     frequencias = frequencias,
     territorios = territorios,
-    inicio = periodo_inicial,
-    .local_cache = .local_cache
-  )
+    inicio = periodo_inicial
+    )
   
   if (is.null(ms)) {
     return(NULL)
@@ -103,34 +113,36 @@ atual_serie.series_resume <- function(regra, periodo_inicial, .local_cache, ...)
   ms <- resume_serie(ms, fun = func)
   ms <- janela(ms)
   
-  ms <- attr_regra(ms, regra)
+  ms$meta <- meta
   
   return(ms)
 }
 
-atual_serie.series_aplica <- function(regra, periodo_inicial, .local_cache, ...) {
+atual_serie.series_aplica <- function(regra, periodo_inicial, ...) {
   # Aplica uma função em uma série
   
-  terr <- rec_territorio(regra)
-  freq <- rec_frequencia(regra)
-  inicio <- rec_inicio(regra)
+  meta <- regra$meta
+  dados <- regra$dados
+  
+  terr <- meta$territorio
+  freq <- meta$frequencia
+  inicio <- meta$inicio
   
   periodo_inicial <- as.Date(max(periodo_inicial, inicio))
   
-  series <- regra$series
-  medidas <- regra$medidas
-  frequencias <- regra$frequencias
-  territorios <- regra$territorios
-  func <- regra$func
-  larg <- regra$larg
+  series <- dados$series
+  medidas <- dados$medidas
+  frequencias <- dados$frequencias
+  territorios <- dados$territorios
+  func <- dados$func
+  larg <- dados$larg
   
   ms <- coleta_series(
     series = series,
     medidas = medidas,
     frequencias = frequencias,
     territorios = territorios,
-    inicio = periodo_inicial,
-    .local_cache = .local_cache
+    inicio = periodo_inicial
   )
   
   if (is.null(ms)) {
@@ -140,31 +152,35 @@ atual_serie.series_aplica <- function(regra, periodo_inicial, .local_cache, ...)
   ms <- aplica_serie(ms, fun = func, width = larg)
   ms <- janela(ms)
   
+  ms$meta <- meta
+  
   return(ms)
 }
 
 ## IPCA e IPCA-15 ---------------------------------------------------------------
 
-atual_serie.ipca_composicao <- function(regra, .local_cache, ...) {
+atual_serie.ipca_composicao <- function(regra, ...) {
   # Método para cálculo de IPCA e IPCA-15 com base na composição de outras séries calculadas
   
-  series <- regra$series
-  exclusao <- regra$exclusao
+  meta <- regra$meta
+  dados <- regra$dados
   
-  medi <- rec_medida(regra)
-  terr <- rec_territorio(regra)
-  freq <- rec_frequencia(regra)
+  series <- dados$series
+  exclusao <- dados$exclusao
+  
+  medi <- meta$medida
+  terr <- meta$territorio
+  freq <- meta$frequencia
   
   ms_pesos <- coleta_series(
     series = series,
     medidas = "Peso",
     frequencias = freq,
     territorios = terr,
-    inicio = NULL,
-    .local_cache = .local_cache
+    inicio = NULL
   )
   
-  if (is.null(ms_pesos)) {
+  if (is.null(ms_pesos$serie)) {
     return(NULL)
   }
   
@@ -173,11 +189,10 @@ atual_serie.ipca_composicao <- function(regra, .local_cache, ...) {
     medidas = "Contribuição",
     frequencias = freq,
     territorios = terr,
-    inicio = NULL,
-    .local_cache = .local_cache
+    inicio = NULL
   )
   
-  if (is.null(ms_contribs)) {
+  if (is.null(ms_contribs$serie)) {
     return(NULL)
   }
   
@@ -187,11 +202,10 @@ atual_serie.ipca_composicao <- function(regra, .local_cache, ...) {
       medidas = "Peso",
       frequencias = freq,
       territorios = terr,
-      inicio = NULL,
-      .local_cache = .local_cache
+      inicio = NULL
     )
     
-    if (is.null(ms_peso_cheia)) {
+    if (is.null(ms_peso_cheia$serie)) {
       return(NULL)
     }
     
@@ -200,11 +214,10 @@ atual_serie.ipca_composicao <- function(regra, .local_cache, ...) {
       medidas = "Contribuição",
       frequencias = freq,
       territorios = terr,
-      inicio = NULL,
-      .local_cache = .local_cache
+      inicio = NULL
     )
     
-    if (is.null(ms_contrib_cheia)) {
+    if (is.null(ms_contrib_cheia$serie)) {
       return(NULL)
     }
   }
@@ -224,7 +237,7 @@ atual_serie.ipca_composicao <- function(regra, .local_cache, ...) {
   }
   
   if (medi == "Peso") {
-    peso <- attr_regra(peso, regra)
+    peso$meta <- meta
     
     return(peso)
   }
@@ -235,22 +248,25 @@ atual_serie.ipca_composicao <- function(regra, .local_cache, ...) {
   }
   ms <- resume_serie(ms, fun = temp_fun)
   ms <- janela(ms)
-  ms <- attr_regra(ms, regra)
+  ms$meta <- meta
   
   return(ms)
 }
 
-atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
+atual_serie.ipca_nucleo <- function(regra, ...) {
   # Método para calcular os núcleos do IPCA e IPCA-15
   
-  nucleo <- regra$nucleo
-  series <- regra$series
-  suav <- regra$suav
-  serie_cheia <- regra$serie_cheia
+  meta <- regra$meta
+  dados <- regra$dados
   
-  medi <- rec_medida(regra)
-  terr <- rec_territorio(regra)
-  freq <- rec_frequencia(regra)
+  nucleo <- dados$nucleo
+  series <- dados$series
+  suav <- dados$suav
+  serie_cheia <- dados$serie_cheia
+  
+  medi <- meta$medida
+  terr <- meta$territorio
+  freq <- meta$frequencia
   
   # extrai séries de variação mensal e pesos
   ms_pesos <- coleta_series(
@@ -258,8 +274,7 @@ atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
     medidas = "Peso",
     frequencias = freq,
     territorios = terr,
-    inicio = NULL,
-    .local_cache = .local_cache
+    inicio = NULL
   )
   
   if (is.null(ms_pesos)) {
@@ -272,8 +287,7 @@ atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
       medidas = "Variação mensal",
       frequencias = freq,
       territorios = terr,
-      inicio = NULL,
-      .local_cache = .local_cache
+      inicio = NULL
     )
     
     if (is.null(ms_cheia)) {
@@ -291,8 +305,7 @@ atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
     medidas = "Variação mensal",
     frequencias = freq,
     territorios = terr,
-    inicio = NULL,
-    .local_cache = .local_cache
+    inicio = NULL
   )
   
   if (is.null(ms_vars)) {
@@ -305,8 +318,7 @@ atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
       medidas = "Variação mensal",
       frequencias = freq,
       territorios = terr,
-      inicio = NULL,
-      .local_cache = .local_cache
+      inicio = NULL
     )
     
     if (is.null(ms_suav)) {
@@ -346,10 +358,6 @@ atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
     )
   }
   
-  tsp_vars <- tsp(ms_vars)
-  inicio_vars <- rec_inicio(ms_vars)
-  fim_vars <- rec_fim(ms_vars)
-  
   if (!is.null(suav)) {
     series <- series_totais
   }
@@ -359,8 +367,7 @@ atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
     medidas = "Peso",
     frequencias = freq,
     territorios = terr,
-    inicio = NULL,
-    .local_cache = .local_cache
+    inicio = NULL
   )
   
   if (is.null(ms_peso_cheia)) {
@@ -429,7 +436,7 @@ atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
       ms_combs,
       fun = temp_fun,
       n = n)
-    ms <- attr_regra(ms, regra)
+    ms$meta <- meta
     ms <- janela(ms)
     
     return(ms)
@@ -457,7 +464,7 @@ atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
     ms <- resume_serie(x = comb_series,
                        fun = temp_fun,
                        ncols = ncol(ms_vars))
-    ms <- attr_regra(ms, regra)
+    ms$meta <- meta
     ms <- janela(ms)
     
     return(ms)
@@ -480,7 +487,7 @@ atual_serie.ipca_nucleo <- function(regra, .local_cache, ...) {
       fun = temp_fun,
       n = n
     )
-    ms <- attr_regra(ms, regra)
+    ms$meta <- meta
     ms <- janela(ms)
     
     return(ms)

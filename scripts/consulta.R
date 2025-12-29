@@ -22,12 +22,7 @@
 consulta <- function(...,
                      inicio = NULL,
                      fim = NULL,
-                     atualiza = FALSE,
-                     ignora_nulo = TRUE) {
-  gemac_series <- get_gemac_series()
-  names_list <- get_names_list()
-  codigos_7060 <- get_codigos_7060()
-  
+                     atualiza = FALSE) {
   opcao_original <- getOption("macroseries.atualiza", FALSE)
   if (atualiza) {
     options(macroseries.atualiza = TRUE)
@@ -177,7 +172,7 @@ consulta <- function(...,
   exprs <- lapply(exprs, as.character)
   parsed <- lapply(exprs, parse_expression)
   series_names_input <- vapply(parsed, function(x) x$serie, character(1))
-  args <- names_list[series_names_input]
+  args <- lista_repos[series_names_input]
   
   # extrai as séries
   ms_list <- lapply(args, function(item) {
@@ -186,9 +181,7 @@ consulta <- function(...,
         medida     = item$medida,
         frequencia = item$frequencia,
         territorio = item$territorio,
-        inicio     = inicio,
-        ignora_nulo= ignora_nulo,
-        .local_cache = NULL
+        inicio     = inicio
       )
   })
   

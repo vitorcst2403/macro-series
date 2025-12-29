@@ -4,5 +4,6 @@
 .Ruserdata
 .Rprofile
 repo/
+regras/
 teste_release.Rmd
 teste_release.docx

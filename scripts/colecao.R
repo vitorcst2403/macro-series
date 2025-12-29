@@ -1,5 +1,5 @@
-coleta_series <- function(series, medidas = NULL, frequencias = NULL, territorios = NULL,
-                          inicio = NULL, ignora_nulo = TRUE, .local_cache) {
+coleta_series <- function(series, medidas, frequencias, territorios,
+                          inicio = NULL) {
   # validações e preparação de vetores
   
   if (!is.character(series)) {
@@ -10,28 +10,28 @@ coleta_series <- function(series, medidas = NULL, frequencias = NULL, territorio
   
   if (!is.null(medidas)) {
     if (length(medidas) == 1) {
-      medidas <- rep(medidas, length(series))
-    } else if (length(medidas) != length(series)) {
+      medidas <- rep(medidas, n)
+    } else if (length(medidas) != n) {
       stop("'medidas' deve ter tamanho 1 ou o mesmo de 'series'.")
     }
   } else {
-    medidas <- rep(list(NULL), n)
+    stop("Medidas devem ser definidas")
   }
   
   if (!is.null(frequencias)) {
     if (length(frequencias) == 1) {
-      frequencias <- rep(frequencias, length(series))
-    } else if (length(frequencias) != length(series)) {
+      frequencias <- rep(frequencias, n)
+    } else if (length(frequencias) != n) {
       stop("'frequencias' deve ter tamanho 1 ou o mesmo de 'series'.")
     }
   } else {
-    frequencias <- rep(list(NULL), n)
+    stop("Frequencias devem ser definidas")
   }
   
   if (!is.null(territorios)) {
     if (length(territorios) == 1) {
-      territorios <- rep(territorios, length(series))
-    } else if (length(territorios) != length(series)) {
+      territorios <- rep(territorios, n)
+    } else if (length(territorios) != n) {
       stop("'territorios' deve ter tamanho 1 ou o mesmo de 'series'.")
     }
   } else {
@@ -46,34 +46,27 @@ coleta_series <- function(series, medidas = NULL, frequencias = NULL, territorio
   
   # função que define a regra e realiza a extração
   
-  args_list <- list(
-    serie = series,
-    medida = medidas,
-    frequencia = frequencias,
-    territorio = territorios,
-    inicio = inicios
-  )
+  serie_repos <- list()
   
-  ms_list <- purrr::pmap(args_list, function(serie, medida, frequencia, territorio, inicio) {
-    extrai_safe(serie, medida, frequencia, territorio, inicio, 
-                ignora_nulo = ignora_nulo, .local_cache = .local_cache)
+  for (i in 1:n) {
+    if (is.null(territorios[i])) {
+      serie_repo[[i]] <- paste(tolower(seriess[i]), sufixos_medi(medidas[i]), tolower(frequencias[i]), sep = "_")
+    } else {
+      serie_repo[[i]] <- paste(tolower(seriess[i]), sufixos_medi(medidas[i]), tolower(frequencias[i]), tolower(territorios[i]), sep = "_") 
+    }
+  }
+  
+  ms_list <- lapply(serie_repos, function(repos) {
+    extrai_safe(repos, inicio = inicio)
   })
   
-  names(ms_list) <- series
-  
-  if (!ignora_nulo && sum(sapply(ms_list, is.null)) > 0) {
+  if (sum(sapply(ms_list, is.null)) > 0) {
+    warning("Erro na coleção das séries. ")
     return(NULL)
   }
-  
-  if (sum(sapply(ms_list, is.null)) == length(ms_list)) {
-    return(NULL)
-  }
-  
-  ms_list <- Filter(function(x)
-    !is.null(x), ms_list)
   
   ms <- Reduce(function(x, y)
-    combina_serie(x, y, fill = FALSE), ms_list)
+    combina_serie(x, y), ms_list)
   
   return(ms)
 }

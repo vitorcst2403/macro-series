@@ -1,7 +1,10 @@
 ms_dados <- function(dados, 
                      regra) {
   # Converte um dataframe com coluna 'data' e 'valor' em um objeto 'macro_serie' com base em uma regra de formação 
-  freq <- rec_frequencia(regra)
+  
+  meta <- regra$meta
+  
+  freq <- meta$frequencia
   
   freqs <- c(
     "D" = 365,
@@ -28,20 +31,23 @@ ms_dados <- function(dados,
     
     dados <- dplyr::left_join(data.frame(data = data), dados, by = "data")
     
+    fim <- max(dados$data)
+    
     serie <- ts(
       data = dados$valor,
       start = c(lubridate::year(inicio), inicio_freq),
       frequency = freqs[freq]
     )
     
-    attr_serie <- attributes(serie)[setdiff(names(attributes(serie)), "class")]
-    attr_regra <- attributes(regra)[setdiff(names(attributes(regra)), c("class", "names"))]
-    class_serie <- c("macro_serie", class(serie))
+    meta <- c(meta,
+              list(fim = fim))
     
-    attributes(serie) <- c(list("class" = class_serie), attr_serie, attr_regra)
-    attr(serie, "fim") <- as.character(fim)
+    ms <- list(serie = serie,
+               meta = meta)
     
-    return(serie)
+    class(ms) <- "macro_serie"
+    
+    return(ms)
   }
   
   fim <- max(dados$data)
@@ -49,14 +55,15 @@ ms_dados <- function(dados,
   serie <- zoo::zoo(x = dados$valor, 
                     order.by = dados$data)
   
-  attr_serie <- attributes(serie)[setdiff(names(attributes(serie)), "class")]
-  attr_regra <- attributes(regra)[setdiff(names(attributes(regra)), c("class", "names"))]
-  class_serie <- c("macro_serie", class(serie))
+  meta <- c(meta,
+            list(fim = fim))
   
-  attributes(serie) <- c(list("class" = class_serie), attr_serie, attr_regra)
-  attr(serie, "fim") <- as.character(fim)
+  ms <- list(serie = serie,
+             meta = meta)
   
-  return(serie)
+  class(ms) <- "macro_serie"
+  
+  return(ms)
 }
 
 
@@ -70,7 +77,7 @@ combina_serie.default <- function(x1, x2) {
   stop("Método válido somente para objeto macro_serie")
 }
 
-combina_serie.macro_serie <- function(x1, x2, fill = TRUE) {
+combina_serie.macro_serie <- function(x1, x2) {
   if(is.null(x2)) {
     return(x1)
   }
@@ -79,8 +86,8 @@ combina_serie.macro_serie <- function(x1, x2, fill = TRUE) {
     stop("Os dois argumentos devem ser de classe 'macro_serie'")
   }
   
-  freq1 <- rec_frequencia(x1)
-  freq2 <- rec_frequencia(x2)
+  freq1 <- x1$meta$frequencia
+  freq2 <- x2$meta$frequencia
   
   freqs <- c("D" = 365, 
              "Q" = 24, 
@@ -91,12 +98,12 @@ combina_serie.macro_serie <- function(x1, x2, fill = TRUE) {
   
   freq <- names(freqs[freqs == max(freqs[freq1], freqs[freq2])])
   
-  ini1 <- rec_inicio(x1)
-  ini2 <- rec_inicio(x2)
+  ini1 <- x1$meta$inicio
+  ini2 <- x2$meta$inicio
   ini <- min(ini1, ini2)
   
-  fim1 <- rec_fim(x1)
-  fim2 <- rec_fim(x2)
+  fim1 <- x1$meta$fim
+  fim2 <- x2$meta$fim
   fim <- max(fim1, fim2)
   
   data <- NULL
@@ -112,26 +119,12 @@ combina_serie.macro_serie <- function(x1, x2, fill = TRUE) {
                                 lista_datas(x2))))
   }
   
-  df1 <- data.frame(cbind(data = lista_datas(x1), as.data.frame(x1)))
-  df2 <- data.frame(cbind(data = lista_datas(x2), as.data.frame(x2)))
+  df1 <- data.frame(cbind(data = lista_datas(x1), as.data.frame(x1$serie)))
+  df2 <- data.frame(cbind(data = lista_datas(x2), as.data.frame(x2$serie)))
   df <- data.frame(data = data)
   df <- dplyr::left_join(df, df1, by = "data")
   df <- dplyr::left_join(df, df2, by = "data")
   df <- df[setdiff(names(df), "data")]
-  colnames(df) <- c(rec_serie(x1), rec_serie(x2))
-  
-  if(fill) {
-    if(freq != "D") {
-      
-      for(cols in names(df)) {
-        df[[cols]] <- zoo::na.locf(df[[cols]], na.rm = FALSE)
-      }
-    } else {
-      for(cols in names(df)) {
-        df[[cols]] <- zoo::na.approx(df[[cols]], na.rm = FALSE)
-      }
-    }
-  }
   
   if(freq != "D") {
     inicio_ano <- lubridate::year(ini)
@@ -141,41 +134,32 @@ combina_serie.macro_serie <- function(x1, x2, fill = TRUE) {
       inicio_freq <- (lubridate::month(ini)-1)*12/freqs[freq] + 1
     }
     
-    mserie <- ts(data = df,
+    serie <- ts(data = df,
                  start = c(inicio_ano, inicio_freq),
                  frequency = freqs[freq])
   } else {
-    mserie <- zoo::zoo(df, order.by = data)
+    serie <- zoo::zoo(df, order.by = data)
   }
   
-  dimnames(mserie) <- list(NULL, c(attr(x1, "descricao"), attr(x2, "descricao")))
+  meta <- Map(c, x1$meta, x2$meta)
+  ms <- list(serie = serie,
+             meta = meta)
   
-  attrs <- c("tema", "descricao", "serie", "unidade",  
-             "medida", "territorio")
+  class(ms) <- "macro_serie"
   
-  attributes(mserie) <- c(attributes(mserie), setNames(lapply(attrs, function(a) {
-    c(as.character(attributes(x1)[[a]]), 
-      as.character(attributes(x2)[[a]]))
-  }), attrs))
-  
-  attr(mserie, "inicio") <- as.character(ini)
-  attr(mserie, "fim") <- as.character(fim)
-  attr(mserie, "frequencia") <- freq
-  class(mserie) <- c("macro_serie", class(mserie))
-  
-  return(mserie)
+  return(ms)
 }
 
 # Aplica função em séries ------------------------------------
-aplica_serie <- function(serie, fun, ...) {
+aplica_serie <- function(ms, fun, ...) {
   UseMethod("aplica_serie")
 }
 
-aplica_serie.default <- function(serie, fun) {
+aplica_serie.default <- function(ms, fun) {
   stop("Método válido somente para objeto macro_serie")
 }
 
-aplica_serie.macro_serie <- function(serie, 
+aplica_serie.macro_serie <- function(ms, 
                                      fun, 
                                      roll = TRUE,
                                      width = 1, 
@@ -183,14 +167,16 @@ aplica_serie.macro_serie <- function(serie,
                                      fill = NA, 
                                      partial = FALSE,
                                      ...) {
-  attrs <- attributes(serie)
+  
+  serie <- ms$serie
+  meta <- ms$meta
   
   if(is.null(dim(serie))) {
     serie <- matrix(serie, ncol = 1)
   } 
   
   if (roll) {
-    ms <- apply(serie, 2, function(col) {
+    serie <- apply(serie, 2, function(col) {
       zoo::rollapply(col, 
                      width = width,
                      FUN = fun,
@@ -199,67 +185,34 @@ aplica_serie.macro_serie <- function(serie,
                      partial = partial)
     })
   } else {
-    ms <- apply(serie, 2, function(col) fun(col))
+    serie <- apply(serie, 2, function(col) fun(col))
   }
   
-  attributes(ms) <- attrs
+  ms <- lista(serie = serie,
+              meta = meta)
   
   return(ms)
 }
 
 # Resume séries por função ------------------------------------
-resume_serie <- function(x, fun, ...) {
+resume_serie <- function(ms, fun, ...) {
   UseMethod("resume_serie")
 }
 
-resume_serie.default <- function(x, fun, ...) {
+resume_serie.default <- function(ms, fun, ...) {
   stop("Método válido somente para objeto macro_serie")
 }
 
-resume_serie.macro_serie <- function(x, 
+resume_serie.macro_serie <- function(ms, 
                                      fun, 
                                      ...) {
-  # NOVA IMPLEMENTAÇÃO (sem eval(parse(...)))
-  # - aceita fun como função
-  # - aceita fun como string para retro-compatibilidade (convertida via rlang),
-  #   avaliada em ambiente controlado com dados: x (vetor) e quaisquer args extras.
   dots <- list(...)
   extra_args <- if (length(dots) == 0) list() else dots
   
-  temas <- rec_tema(x)
-  if(length(unique(temas)) == 1) {
-    tema <- unique(temas)
-  } else {
-    tema = NULL
-  }
+  serie <- ms$serie
   
-  unis <- rec_unidade(x)
-  if(length(unique(unis)) == 1) {
-    unidade <- unique(unis)
-  } else {
-    unidade = NULL
-  }
-  
-  medis <- rec_medida(x)
-  if(length(unique(medis)) == 1) {
-    medida <- unique(medis)
-  } else {
-    medida = NULL
-  }
-  
-  terris <- rec_territorio(x)
-  if(length(unique(terris)) == 1) {
-    territorio <- unique(terris)
-  } else {
-    territorio = NULL
-  }
-  
-  freq <- rec_frequencia(x)
-  ini <- rec_inicio(x)
-  fim <- rec_fim(x)
-  
-  if(is.null(dim(x))) {
-    x <- matrix(x, ncol = 1)
+  if(is.null(dim(serie))) {
+    serie <- matrix(serie, ncol = 1)
   } 
   
   # prepara função que será aplicada a cada linha:
@@ -274,58 +227,38 @@ resume_serie.macro_serie <- function(x,
   }
   
   # aplica por linha
-  ms_res <- apply(x, 1, function(row) fun_fn(row))
+  serie_res <- apply(serie, 1, function(row) fun_fn(row))
   
   # determina formato do resultado
-  is_matrix <- !is.null(dim(ms_res))
+  is_matrix <- !is.null(dim(serie_res))
   if (is_matrix) {
-    ms_res <- t(ms_res)
-    dim_ms <- dim(ms_res)[2]
-  } else {
-    dim_ms <- 1
-  }
+    serie_res <- t(serie_res)
+  } 
   
-  if(all(is.na(ms_res))) {
+  if(all(is.na(serie_res))) {
     return(NULL)
   }
   
   # atribui atributos de saída coerentes com tipo (ts / zoo)
-  if(freq != "D") {
-    if(is_matrix) {
-      attr(ms_res, "tema") <- rep(tema, dim_ms)
-      attr(ms_res, "descricao") <- paste0("Série calculada ", 1:dim_ms)
-      attr(ms_res, "serie") <- paste0("calc_", 1:dim_ms)
-      attr(ms_res, "unidade") <- rep(unidade, dim_ms)
-      attr(ms_res, "medida") <- rep(medida, dim_ms)
-      attr(ms_res, "inicio") <- ini
-      attr(ms_res, "fim") <- fim
-      attr(ms_res, "frequencia") <- freq
-      attr(ms_res, "class") <- c("macro_serie", "mts", "ts", "matrix", "array")
-      attr(ms_res, "tsp") <- attributes(x)$tsp
-    } else {
-      attr(ms_res, "tema") <- tema
-      attr(ms_res, "descricao") <- "Série calculada"
-      attr(ms_res, "serie") <- "calc_1"
-      attr(ms_res, "unidade") <- unidade
-      attr(ms_res, "medida") <- medida
-      attr(ms_res, "inicio") <- ini
-      attr(ms_res, "fim") <- fim
-      attr(ms_res, "frequencia") <- freq
-      attr(ms_res, "class") <- c("macro_serie", "ts")
-      attr(ms_res, "tsp") <- attributes(x)$tsp
-    }
+  if(inherits(ms$serie, "ts")) {
+    serie <- ts(
+      data = serie_res,
+      start = start(ms$serie),
+      frequency = frequency(ms$serie)
+    )
   } else {
-    # diária (zoo)
-    attr(ms_res, "tema") <- rep(tema, dim_ms)
-    attr(ms_res, "descricao") <- paste0("Série calculada ", 1:dim_ms)
-    attr(ms_res, "serie") <- paste0("calc_", 1:dim_ms)
-    attr(ms_res, "unidade") <- rep(unidade, dim_ms)
-    attr(ms_res, "medida") <- rep(medida, dim_ms)
-    attr(ms_res, "inicio") <- ini
-    attr(ms_res, "fim") <- fim
-    attr(ms_res, "frequencia") <- freq
-    attr(ms_res, "class") <- c("macro_serie", "zoo")
+    serie <- zoo::zoo(x = serie_res, 
+             order.by = index(ms$serie))
   }
   
-  return(ms_res)
+  meta <- list(
+    descricao = "Série combinada"
+  )
+  
+  ms <- list(serie = serie,
+             meta = meta)
+  
+  class(ms) <- "macro_serie"
+  
+  return(ms)
 }

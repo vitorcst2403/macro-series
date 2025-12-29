@@ -53,10 +53,11 @@ get_str_param <- function(params, keys = c("format", "formato", "fmt")) {
 # média móvel de n períodos (ma)
 ma <- function(ms, n) {
   # preserva atributos, trata unidade "%" com transformação geométrica
-  attrs <- attributes(ms)
-  if (is.null(attrs)) attrs <- list()
-  unid <- attrs$unidade %||% rec_unidade(ms)
-  x <- as.numeric(ms)
+  meta <- ms$meta
+  unid <- meta$unidade
+  serie <- ms$serie
+  attrs <- attributes(serie)
+  x <- as.numeric(serie)
   if (is.null(n) || !is.numeric(n)) stop("ma(): forneça n inteiro, ex: ma(ms, 3)")
   if (unid == "%") {
     f <- function(v) {
@@ -68,14 +69,19 @@ ma <- function(ms, n) {
   }
   res <- zoo::rollapply(x, width = as.integer(n), FUN = f, fill = NA, align = "right")
   attributes(res) <- attrs
-  res
+  ms <- list(serie = res,
+             meta = meta)
+  class(ms) <- "macro_serie"
+  return(ms)
 }
 
 # acumulado de n períodos (acum)
 acum <- function(ms, n) {
-  attrs <- attributes(ms)
-  unid <- attrs$unidade %||% rec_unidade(ms)
-  x <- as.numeric(ms)
+  serie <- ms$serie
+  meta <- ms$meta
+  attrs <- attributes(serie)
+  unid <- meta$unidade
+  x <- as.numeric(serie)
   if (is.null(n) || !is.numeric(n)) stop("acum(): forneça n inteiro, ex: acum(ms, 3)")
   if (unid == "%") {
     f <- function(v) {
@@ -87,20 +93,25 @@ acum <- function(ms, n) {
   }
   res <- zoo::rollapply(x, width = as.integer(n), FUN = f, fill = NA, align = "right")
   attributes(res) <- attrs
-  res
+  ms <- list(serie = res,
+             meta = meta)
+  class(ms) <- "macro_serie"
+  return(ms)
 }
 
 # acumulado do ano (acum_ano)
 acum_ano <- function(ms) {
-  attrs <- attributes(ms)
-  freq <- rec_frequencia(ms)
+  serie <- ms$serie
+  meta <- ms$meta
+  attrs <- attributes(serie)
+  freq <- meta$frequencia
   if (freq == "D") {
     message("Acumulado no ano não é aplicável a série diária.")
     return(ms)
   }
-  unid <- rec_unidade(ms)
-  x <- as.numeric(ms)
-  ts_time <- time(ms)
+  unid <- meta$unidade
+  x <- as.numeric(serie)
+  ts_time <- time(serie)
   ano <- floor(ts_time)
   df <- data.frame(ano = ano, x = x)
   if (unid == "%") {
@@ -112,76 +123,104 @@ acum_ano <- function(ms) {
   df <- dplyr::mutate(df, x = f(x))
   res <- df$x
   attributes(res) <- attrs
-  res
+  ms <- list(serie = res,
+             meta = meta)
+  class(ms) <- "macro_serie"
+  return(ms)
 }
 
 # acumulado total (acumulado)
 acumulado_total <- function(ms) {
-  attrs <- attributes(ms)
-  unid <- attrs$unidade %||% rec_unidade(ms)
-  x <- as.numeric(ms)
+  serie <- ms$serie
+  meta <- ms$meta
+  attrs <- attributes(serie)
+  unid <- meta$unidade
+  x <- as.numeric(serie)
   if (unid == "%") {
     res <- (exp(cumsum(log(1 + x/100))) - 1) * 100
   } else {
     res <- cumsum(x)
   }
   attributes(res) <- attrs
-  res
+  ms <- list(serie = res,
+             meta = meta)
+  class(ms) <- "macro_serie"
+  return(ms)
 }
 
 # anualizado (anualiza)
 anualiza <- function(ms) {
-  attrs <- attributes(ms)
-  unid <- attrs$unidade %||% rec_unidade(ms)
-  freq <- attrs$frequencia %||% rec_frequencia(ms)
+  serie <- ms$serie
+  meta <- ms$meta
+  attrs <- attributes(serie)
+  unid <- meta$unidade
+  freq <- meta$frequencia
   if (freq == "D") {
     message("Série diária não pode ser anualizada.")
     return(ms)
   }
   freqs <- c("Q" = 12, "M" = 12, "T" = 4, "S" = 2, "A" = 1)
-  x <- as.numeric(ms)
+  x <- as.numeric(serie)
   if (unid == "%") {
     x2 <- ((1 + x/100) ^ freqs[freq] - 1) * 100
   } else {
     x2 <- freqs[freq] * x
   }
   attributes(x2) <- attrs
-  x2
+  ms <- list(serie = x2,
+             meta = meta)
+  class(ms) <- "macro_serie"
+  return(ms)
 }
 
 # shift / lag (shift)
 shift <- function(ms, n) {
-  freq <- rec_frequencia(ms)
+  serie <- ms$serie
+  meta <- ms$meta
+  freq <- meta$frequencia
   if (freq == "D") {
     message("shift(): não é aplicável para séries diárias.")
     return(ms)
   }
-  x <- stats::lag(ms, n)
-  x <- janela(x, inicio = rec_inicio(ms), fim = rec_fim(ms))
+  x <- stats::lag(serie, n)
+  msx <- list(serie = x,
+              meta = meta)
+  class(msx) <- "macro_serie"
+  x <- janela(msx, inicio = meta$inicio, fim = meta$fim)
   x
 }
 
 # datas (formatação de período)
 dates_fmt <- function(ms, formato = "%b/%y") {
-  attrs <- attributes(ms)
-  x <- as.numeric(time(ms))
+  serie <- ms$serie
+  meta <- ms$meta
+  attrs <- attributes(serie)
+  x <- as.numeric(time(serie))
   attributes(x) <- attrs
-  attr(x, "medida") <- "Tempo"
-  attr(x, "unidade") <- formato
-  x
+  meta$medida <- "Tempo"
+  meta$unidade <- formato
+  ms <- list(serie = x,
+             meta = meta)
+  class(ms) <- "macro_serie"
+  return(ms)
 }
 
 # diferença n períodos (diff)
 diff_n <- function(ms, n) {
-  attrs <- attributes(ms)
-  inicio <- rec_inicio(ms)
-  freq <- rec_frequencia(ms)
+  serie <- ms$serie
+  meta <- ms$meta
+  attrs <- attributes(serie)
+  inicio <- meta$inicio
+  freq <- meta$frequencia
   # calcula novo inicio avançando n períodos
   inicio_novo <- Reduce(function(acc, ...) prox_periodo(acc, freq), x = seq_len(n), init = inicio)
-  x <- abs(diff(ms, lag = n))
-  attributes(x) <- c(attributes(x), attrs[setdiff(names(attrs), names(attributes(x)))])
-  attr(x, "inicio") <- inicio_novo
-  x
+  x <- abs(diff(serie, lag = n))
+  attributes(x) <- attrs
+  meta$inicio <- inicio_novo
+  ms <- list(serie = x,
+             meta = meta)
+  class(ms) <- "macro_serie"
+  return(ms)
 }
 
 # --- Cria o mods_registry: mapeia nomes canônicos para handlers -------------
