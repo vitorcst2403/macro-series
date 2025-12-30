@@ -95,9 +95,6 @@ snipc <- function(tabela,
                         var,
                         terr), collapse = "_")
   
-  series_name <-paste0("snipc::", tab, "::", cod, "::", var, "::", terr)
-  if (cache_has(series_name)) return(cache_get(series_name))
-  
   t_numero = NULL
   
   if(territorio == "Brasil") {
@@ -155,8 +152,6 @@ snipc <- function(tabela,
     data = as.Date(paste0(substr(data, 1, 4), "-", substr(data, 5, 6), "-01")),
     valor = as.numeric(valor)
   )
-  
-  cache_set(series_name, dados)
   
   return(dados)
 }

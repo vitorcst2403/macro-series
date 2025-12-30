@@ -1,12 +1,11 @@
-extrai_serie <- function(repo, inicio = NULL, 
-                         atual = getOption("macroseries.atualiza", FALSE)) {
+extrai_serie <- function(repo, inicio, atual) {
   # tenta extrair do repo
   regra <- extrai_regra(repo)
   ms <- extrai_repo(repo, regra)
   
   # se atualizar é permitido e/ou ms ausente -> buscar atualização via S3 method
   if (atual) {
-    periodo_inicial <- if (is.null(inicio)) as.Date(regra$inicio) else as.Date(inicio)
+    periodo_inicial <- if (is.null(inicio)) as.Date(regra$meta$inicio) else as.Date(inicio)
     ms_atual <- atual_serie(regra, periodo_inicial = periodo_inicial)
     if (!is.null(ms_atual)) {
       # se havia ms local e ms_atual é mais recente, combina; senão salva
@@ -29,9 +28,7 @@ extrai_serie <- function(repo, inicio = NULL,
 }
 
 # wrapper para extracao safe
-extrai_safe <- function(repo, inicio, 
-                        atual = getOption("macroseries.atualiza", FALSE), 
-                        ignora_nulo = TRUE) {
+extrai_safe <- function(repo, inicio, atual) {
   tryCatch({
     ms <- extrai_serie(repo, inicio = inicio, atual = atual)
     ms

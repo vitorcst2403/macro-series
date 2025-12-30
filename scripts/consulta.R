@@ -28,6 +28,7 @@ consulta <- function(...,
     options(macroseries.atualiza = TRUE)
     on.exit(options(macroseries.atualiza = opcao_original), add = TRUE)
   }
+  atual <- getOption("macroseries.atualiza")
   
   # ---------- utilitários ----------
   trim <- function(x) gsub("^\\s+|\\s+$", "", x)
@@ -171,18 +172,14 @@ consulta <- function(...,
   if (length(exprs) == 0) stop("Forneça ao menos uma expressão de consulta.")
   exprs <- lapply(exprs, as.character)
   parsed <- lapply(exprs, parse_expression)
-  series_names_input <- vapply(parsed, function(x) x$serie, character(1))
+  series_names_input <- tolower(vapply(parsed, function(x) x$serie, character(1)))
   args <- lista_repos[series_names_input]
   
   # extrai as séries
-  ms_list <- lapply(args, function(item) {
-      extrai_safe(
-        serie      = item$serie,
-        medida     = item$medida,
-        frequencia = item$frequencia,
-        territorio = item$territorio,
-        inicio     = inicio
-      )
+  ms_list <- lapply(args, function(repos) {
+      extrai_safe(repos, 
+                  inicio = inicio,
+                  atual = atual)
   })
   
   # aplica pipeline para cada parsed item
@@ -222,8 +219,6 @@ consulta <- function(...,
   }
   
   ms_applied <- lapply(parsed, apply_parsed)
-  names(ms_applied) <- series_names_input
-  ms_applied <- Filter(Negate(is.null), ms_applied)
   if (length(ms_applied) == 0) return(NULL)
   ms_comb <- Reduce(function(x, y) combina_serie(x, y, fill = FALSE), ms_applied)
   ms_comb <- janela(ms_comb, inicio = inicio, fim = fim)

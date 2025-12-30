@@ -50,14 +50,16 @@ coleta_series <- function(series, medidas, frequencias, territorios,
   
   for (i in 1:n) {
     if (is.null(territorios[i])) {
-      serie_repo[[i]] <- paste(tolower(seriess[i]), sufixos_medi(medidas[i]), tolower(frequencias[i]), sep = "_")
+      serie_repos[[i]] <- paste(tolower(series[i]), sufixos_medi(medidas[i]), tolower(frequencias[i]), sep = "_")
     } else {
-      serie_repo[[i]] <- paste(tolower(seriess[i]), sufixos_medi(medidas[i]), tolower(frequencias[i]), tolower(territorios[i]), sep = "_") 
+      serie_repos[[i]] <- paste(tolower(series[i]), sufixos_medi(medidas[i]), tolower(frequencias[i]), sufixos_terri(territorios[i]), sep = "_") 
     }
   }
   
   ms_list <- lapply(serie_repos, function(repos) {
-    extrai_safe(repos, inicio = inicio)
+    extrai_safe(repos, 
+                inicio = inicio,
+                atual = TRUE)
   })
   
   if (sum(sapply(ms_list, is.null)) > 0) {

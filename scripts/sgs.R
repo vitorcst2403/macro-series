@@ -4,7 +4,6 @@ sgs <- function(codigo,
                 inicio_diario = NULL) {
   # Função para extrair séries do SGS do BACEN
   series_name <- paste0("sgs::", codigo, "::", freq)
-  if (cache_has(series_name)) return(cache_get(series_name))
   
   retry_fun <- function(x) httr::RETRY(
     "GET",
@@ -40,9 +39,6 @@ sgs <- function(codigo,
     dados <- do.call(rbind, lapply(dados, as.data.frame))
     dados <- dplyr::arrange(dados, data)
     row.names(dados) <- NULL
-    
-    # Salva a série cheia no cache
-    cache_set(series_name, dados)
     
     return(dados)
   }
@@ -104,9 +100,6 @@ sgs <- function(codigo,
   dados <- do.call(rbind, lapply(dados, as.data.frame))
   dados <- dplyr::arrange(dados, data)
   row.names(dados) <- NULL
-  
-  # Salva a série cheia no cache
-  cache_set(series_name, dados)
   
   return(dados)
 }

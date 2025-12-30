@@ -57,8 +57,8 @@ janela.macro_serie <- function(ms, inicio = NULL, fim = NULL, nonNA = TRUE) {
                     end = c(lubridate::year(fim), dtf(fim, freq))
     )
     if(nonNA) {
-      inicio_vec <- time(serie[!is.na(serie)])[1]
-      fim_vec <- tail(time(serie[!is.na(serie)]), 1)
+      inicio_vec <- time(serie)[!is.na(serie)][1]
+      fim_vec <- tail(time(serie)[!is.na(serie)], 1)
       
       serie <- window(serie, 
                       start = inicio_vec,
@@ -72,8 +72,8 @@ janela.macro_serie <- function(ms, inicio = NULL, fim = NULL, nonNA = TRUE) {
                     end = fim)
     
     if(nonNA) {
-      inicio_vec <- index(serie[!is.na(serie)])[1]
-      fim_vec <- index(time(serie[!is.na(serie)]), 1)
+      inicio_vec <- index(serie)[!is.na(serie)][1]
+      fim_vec <- tail(index(serie)[!is.na(serie)], 1)
       
       serie <- window(serie, 
                       start = inicio_vec,

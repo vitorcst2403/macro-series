@@ -48,7 +48,7 @@ atual_serie.snipc_puro <- function(regra, ...) {
 # cria série do SGS com base na regra
 atual_serie.sgs_puro <- function(regra, periodo_inicial, ...) {
   codigo <- regra$dados$codigo
-  freq <- regra$dados$frequencia
+  freq <- regra$meta$frequencia
   
   inicio_diario = NULL
   if (freq == "D") {
@@ -111,9 +111,13 @@ atual_serie.series_resume <- function(regra, periodo_inicial, ...) {
   }
   
   ms <- resume_serie(ms, fun = func)
-  ms <- janela(ms)
-  
+  ini <- ms$meta$inicio
+  fim <- ms$meta$fim
+  meta$inicio <- ini
+  meta$fim <- fim
   ms$meta <- meta
+  
+  ms <- janela(ms)
   
   return(ms)
 }
@@ -336,7 +340,7 @@ atual_serie.ipca_nucleo <- function(regra, ...) {
       partial = TRUE
     )
     
-    ms_vars <- combina_serie(ms_vars, ms_suav, fill = FALSE)
+    ms_vars <- combina_serie(ms_vars, ms_suav)
     
     temp_fun <- function(x, series, suav, series_totais) {
       n_total <- length(series_totais)
@@ -379,7 +383,7 @@ atual_serie.ipca_nucleo <- function(regra, ...) {
     return(x[-1]/x[1]*100)
   }
   
-  ms_pesos <- resume_serie(x = comb_pesos, fun = temp_fun)
+  ms_pesos <- resume_serie(comb_pesos, temp_fun)
   
   if (nucleo == "ms") {
     order_vars <- resume_serie(ms_vars, fun = order)
@@ -414,7 +418,7 @@ atual_serie.ipca_nucleo <- function(regra, ...) {
     }
     
     ms_posicoes <- resume_serie(
-      x = ms_pesos_acum,
+      ms = ms_pesos_acum,
       fun = temp_fun)
     n = length(series)
     ms_combs <- combina_serie(x1 = combina_serie(x1 = ms_pesos_ordem, x2 = ms_vars_ordem),
@@ -436,8 +440,10 @@ atual_serie.ipca_nucleo <- function(regra, ...) {
       ms_combs,
       fun = temp_fun,
       n = n)
-    ms$meta <- meta
     ms <- janela(ms)
+    fim <- ms$meta$fim
+    ms$meta <- meta
+    ms$meta$fim <- fim
     
     return(ms)
   }
@@ -454,18 +460,20 @@ atual_serie.ipca_nucleo <- function(regra, ...) {
     )
     comb_pesos <- combina_serie(x1 = ms_pesos, x2 = ms_sds)
     temp_fun <- function(x, ncols) x[1:ncols]/x[(ncols+1):(2*ncols)]
-    ms_pesos_ajus <- resume_serie(x = comb_pesos,
+    ms_pesos_ajus <- resume_serie(ms = comb_pesos,
                                   fun = temp_fun,
-                                  ncols = ncol(ms_sds))
+                                  ncols = ncol(ms_sds$serie))
     comb_series <- combina_serie(x1 = ms_vars, x2 = ms_pesos_ajus)
     temp_fun <- function(x, ncols) {
       sum(x[1:ncols]*x[(ncols+1):(2*ncols)])/sum(x[(ncols+1):(2*ncols)])
     }
-    ms <- resume_serie(x = comb_series,
+    ms <- resume_serie(ms = comb_series,
                        fun = temp_fun,
-                       ncols = ncol(ms_vars))
-    ms$meta <- meta
+                       ncols = ncol(ms_vars$serie))
     ms <- janela(ms)
+    fim <- ms$meta$fim
+    ms$meta <- meta
+    ms$meta$fim <- fim
     
     return(ms)
   }
@@ -483,12 +491,14 @@ atual_serie.ipca_nucleo <- function(regra, ...) {
       return(sort(x3)[posi])
     }
     ms <- resume_serie(
-      x = comb_series,
+      ms = comb_series,
       fun = temp_fun,
       n = n
     )
-    ms$meta <- meta
     ms <- janela(ms)
+    fim <- ms$meta$fim
+    ms$meta <- meta
+    ms$meta$fim <- fim
     
     return(ms)
   }

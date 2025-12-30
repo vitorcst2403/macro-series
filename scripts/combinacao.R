@@ -98,13 +98,13 @@ combina_serie.macro_serie <- function(x1, x2) {
   
   freq <- names(freqs[freqs == max(freqs[freq1], freqs[freq2])])
   
-  ini1 <- x1$meta$inicio
-  ini2 <- x2$meta$inicio
-  ini <- min(ini1, ini2)
+  ini1 <- as.Date(x1$meta$inicio)
+  ini2 <- as.Date(x2$meta$inicio)
+  ini <- as.Date(min(ini1, ini2))
   
-  fim1 <- x1$meta$fim
-  fim2 <- x2$meta$fim
-  fim <- max(fim1, fim2)
+  fim1 <- as.Date(x1$meta$fim)
+  fim2 <- as.Date(x2$meta$fim)
+  fim <- as.Date(max(fim1, fim2))
   
   data <- NULL
   
@@ -141,7 +141,12 @@ combina_serie.macro_serie <- function(x1, x2) {
     serie <- zoo::zoo(df, order.by = data)
   }
   
-  meta <- Map(c, x1$meta, x2$meta)
+  meta <- mapply(function(n) c(x1[[n]], x2[[n]]),
+                 n = union(names(x1), names(x2)),
+                 SIMPLIFY = FALSE)
+  meta$frequencia <- freq
+  meta$inicio <- as.Date(ini)
+  meta$fim <- as.Date(fim)
   ms <- list(serie = serie,
              meta = meta)
   
@@ -169,6 +174,7 @@ aplica_serie.macro_serie <- function(ms,
                                      ...) {
   
   serie <- ms$serie
+  attrs <- attributes(serie)
   meta <- ms$meta
   
   if(is.null(dim(serie))) {
@@ -188,8 +194,11 @@ aplica_serie.macro_serie <- function(ms,
     serie <- apply(serie, 2, function(col) fun(col))
   }
   
-  ms <- lista(serie = serie,
+  attributes(serie) <- attrs
+  
+  ms <- list(serie = serie,
               meta = meta)
+  class(ms) <- "macro_serie"
   
   return(ms)
 }
@@ -210,6 +219,13 @@ resume_serie.macro_serie <- function(ms,
   extra_args <- if (length(dots) == 0) list() else dots
   
   serie <- ms$serie
+  meta <- ms$meta
+  if (!is.null(meta$inicio) && !is.numeric(meta$inicio)) {
+    inicio <- as.Date(min(meta$inicio))
+  }
+  if (!is.null(meta$fim) && !is.numeric(meta$fim)) {
+    fim <- as.Date(max(meta$fim))
+  }
   
   if(is.null(dim(serie))) {
     serie <- matrix(serie, ncol = 1)
@@ -252,7 +268,10 @@ resume_serie.macro_serie <- function(ms,
   }
   
   meta <- list(
-    descricao = "Série combinada"
+    descricao = "Série resumida",
+    inicio = as.Date(inicio),
+    fim = as.Date(fim),
+    frequencia = ms$meta$frequencia
   )
   
   ms <- list(serie = serie,

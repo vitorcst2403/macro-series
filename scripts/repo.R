@@ -9,13 +9,15 @@ extrai_repo <- function(repo, regra) {
   }
   
   repo_wd <- data_path
-  tema <- regra$tema
+  tema <- regra$meta$tema
+  descricao <- regra$meta$descricao
+  medida <- regra$meta$medida
   
   caminho_serie <- file.path(repo_wd, "repo", tema)
   if (!dir.exists(caminho_serie)) {
     dir.create(caminho_serie, recursive = TRUE, showWarnings = FALSE)
   }
-  serie_repo <- file.path(caminho_serie, paste0(serie_repo, ".rds"))
+  serie_repo <- file.path(caminho_serie, paste0(repo, ".rds"))
   
   # usar caminho absoluto para consistência
   serie_repo_abs <- normalizePath(serie_repo, winslash = "/", mustWork = FALSE)
@@ -36,6 +38,9 @@ salva_repo <- function(ms, repo, regra) {
   }
   
   repo_wd <- data_path
+  tema <- regra$meta$tema
+  descricao <- regra$meta$descricao
+  medida <- regra$meta$medida
   
   serie_repo <- file.path("repo", tema, paste0(repo, ".rds"))
   serie_repo <- file.path(repo_wd, serie_repo)

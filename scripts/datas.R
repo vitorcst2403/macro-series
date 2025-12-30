@@ -11,6 +11,9 @@ gera_datas <- function(freq,
            "S" = "6 m",
            "A" = "y")
   
+  inicio = as.Date(inicio)
+  fim = as.Date(fim)
+  
   inicio_ano <- lubridate::year(inicio)
   inicio_mes <- lubridate::month(inicio)
   
