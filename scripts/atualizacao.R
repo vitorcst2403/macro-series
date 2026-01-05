@@ -38,7 +38,8 @@ atual_serie.snipc_puro <- function(regra, ...) {
     return(NULL)
   }
   
-  ms <- ms_dados(dados = dados, regra = regra)
+  ms <- ms_dados(dados = dados, 
+                 regra = regra)
   
   return(ms)
 }
@@ -241,7 +242,9 @@ atual_serie.ipca_composicao <- function(regra, ...) {
   }
   
   if (medi == "Peso") {
+    fim <- peso$meta$fim
     peso$meta <- meta
+    peso$meta$fim <- fim
     
     return(peso)
   }
@@ -252,7 +255,9 @@ atual_serie.ipca_composicao <- function(regra, ...) {
   }
   ms <- resume_serie(ms, fun = temp_fun)
   ms <- janela(ms)
+  fim <- ms$meta$fim
   ms$meta <- meta
+  ms$meta$fim <- fim
   
   return(ms)
 }

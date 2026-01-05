@@ -182,6 +182,8 @@ consulta <- function(...,
                   atual = atual)
   })
   
+  return(ms_list)
+  
   # aplica pipeline para cada parsed item
   apply_parsed <- function(parsed_item) {
     sname <- parsed_item$serie
