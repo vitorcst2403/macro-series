@@ -96,3 +96,74 @@ lista_datas.macro_serie <- function(ms) {
   
   return(data)
 }
+
+
+# Frequência em data ------------------------------------------------------
+
+ftd <- function(n, freq) {
+  if(freq != "D") {
+    freqs <- c("Q" = 24,
+               "M" = 12,
+               "T" = 4,
+               "S" = 2,
+               "A" = 1)
+    freq <- freqs[freq]
+    ano <- floor(n)
+    mes <- round((n-ano)*12+1,0)
+    dia = "1"
+    if (freq == 24) dia = ifelse(mes*2 %% 2 == 0, "1", "15")
+    data <- as.Date(paste0(ano, "-", mes, "-", dia))
+    
+    return(data)
+  } 
+  
+  data <- as.Date(n)
+  
+  return(data)
+}
+
+dtf <- function(date, freq) {
+  freqs <- c("Q" = 24,
+             "M" = 12,
+             "T" = 4,
+             "S" = 2,
+             "A" = 1)
+  mes <- lubridate::month(date)
+  dia <- lubridate::day(date)
+  dia <- (dia-1)/14 # 0 ou 1
+  return((mes-1)*freqs[freq]/12 + dia + 1)
+}
+
+
+# Extrai datas para o focus -----------------------------------------------
+
+focus_datas <- function(datas, dia) {
+  datas <- as.Date(datas)
+  first_date <- min(datas, na.rm = TRUE)
+  current_date <- max(datas, na.rm = TRUE)
+  
+  if(!(dia %in% c("Relatório anterior", "Primeiro do ano"))) {
+    return(current_date)
+  }
+  
+  list_weeks <- data.frame(date = seq.Date(from = first_date, 
+                                           to = current_date, 
+                                           by = "1 day"), 
+                       monday = weekdays(date) == "segunda-feira", 
+                       week_number = 1 + cumsum(monday))
+  
+  datas_weeks <- dplyr::left_join(data.frame(date = datas), list_weeks, by = "date") 
+  current_week <- as.numeric(datas_weeks[datas_weeks$date == current_date, 3])
+  
+  if(dia == "Relatório anterior") {
+    semana <- current_week-1
+    datas_weeks <- datas_weeks[datas_weeks$week_number == semana,]
+    return(max(datas_weeks$date, na.rm = TRUE))
+  }
+  
+  if(dia == "Primeiro do ano") {
+    datas_weeks <- datas_weeks[lubridate::year(datas_weeks$date) == lubridate::year(Sys.date()),]
+    datas_weeks <- datas_weeks[datas_weeks$week_number == min(datas_weeks$week_number, na.rm = TRUE),]
+    return(max(datas_weeks$date, na.rm = TRUE))
+  }
+}

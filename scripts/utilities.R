@@ -3,6 +3,7 @@
 print.macro_serie <- function(ms, ...) {
   # print para objeto macro_serie
   serie <- ms$serie
+  serie <- round(serie, 2)
   print(serie)
 }
 
@@ -39,18 +40,6 @@ janela.macro_serie <- function(ms, inicio = NULL, fim = NULL, nonNA = TRUE) {
   
   serie <- ms$serie
   
-  dtf <- function(date, freq) {
-    freqs <- c("Q" = 24,
-               "M" = 12,
-               "T" = 4,
-               "S" = 2,
-               "A" = 1)
-    mes <- lubridate::month(date)
-    dia <- lubridate::day(date)
-    dia <- (dia-1)/14 # 0 ou 1
-    return((mes-1)*freqs[freq]/12 + dia + 1)
-  }
-  
   if(inherits(serie, "ts")) {
     serie <- window(serie, 
                     start = c(lubridate::year(inicio), dtf(inicio, freq)),
@@ -59,6 +48,9 @@ janela.macro_serie <- function(ms, inicio = NULL, fim = NULL, nonNA = TRUE) {
     if(nonNA) {
       inicio_vec <- time(serie)[!is.na(serie)][1]
       fim_vec <- tail(time(serie)[!is.na(serie)], 1)
+      
+      inicio <- ftd(inicio_vec, freq)
+      fim <- ftd(fim_vec, freq)
       
       serie <- window(serie, 
                       start = inicio_vec,

@@ -3,8 +3,6 @@ sgs <- function(codigo,
                 freq,
                 inicio_diario = NULL) {
   # Função para extrair séries do SGS do BACEN
-  series_name <- paste0("sgs::", codigo, "::", freq)
-  
   retry_fun <- function(x) httr::RETRY(
     "GET",
     x,

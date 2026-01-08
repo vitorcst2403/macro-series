@@ -72,6 +72,38 @@ atual_serie.sgs_puro <- function(regra, periodo_inicial, ...) {
   return(ms)
 }
 
+
+# Focus -------------------------------------------------------------------
+
+# Série temporal com referencia fixa
+atual_serie.focus_referencia <- function(regra, ...) {
+  referencia <- regra$dados$referencia
+  indicador <- regra$dados$indicador
+  relatorio <- regra$dados$relatorio
+  estatistica <- regra$dados$estatistica
+  base <- regra$dados$base
+  suavizado <- regra$dados$suavizado
+  tipo_calculo <- regra$dados$tipo_calculo
+
+  dados <- focus_referencia(referencia = referencia,
+                   indicador = indicador,
+                   relatorio = relatorio,
+                   estatistica = estatistica,
+                   base = base,
+                   suavizado = suavizado,
+                   tipo_calculo = tipo_calculo)
+  
+  if (is.null(dados)) {
+    return(NULL)
+  }
+  
+  ms <- ms_dados(dados = dados, 
+                 regra = regra)
+  
+  return(ms)
+}
+
+
 # Métodos recursivos ---------------------------------------
 
 # Métodos que combinam séries entre si
@@ -507,5 +539,50 @@ atual_serie.ipca_nucleo <- function(regra, ...) {
     
     return(ms)
   }
+  
+
+## Focus -------------------------------------------------------------------
+
+  # Série temporal com data do relatorio fixa
+  atual_serie.focus_data <- function(regra, ...) {
+    dia <- regra$dados$dia
+    indicador <- regra$dados$indicador
+    relatorio <- regra$dados$relatorio
+    estatistica <- regra$dados$estatistica
+    base <- regra$dados$base
+    suavizado <- regra$dados$suavizado
+    tipo_calculo <- regra$dados$tipo_calculo
+    
+    ano <- as.character(lubridate::year(Sys.Date()))
+    serie_ex <- paste0("focus_ano_", ano, "_ipca_30d")
+    
+    ms_ex <- coleta_series(series = serie_ex,
+                           medidas = "Mediana",
+                           frequencia = "D",
+                           territorio = "Brasil",
+                           inicio = NULL)
+    
+    datas <- index(ms_ex$serie)
+    
+    data <- focus_datas(datas, dia)
+    data <- as.character(format(data, "%Y-%m-%d"))
+    
+    dados <- focus_data(data = data,
+                        indicador = indicador,
+                        relatorio = relatorio,
+                        estatistica = estatistica,
+                        base = base,
+                        suavizado = suavizado,
+                        tipo_calculo = tipo_calculo)
+  }
+  
+  if (is.null(dados)) {
+    return(NULL)
+  }
+  
+  ms <- ms_dados(dados = dados, 
+                 regra = regra)
+  
+  return(ms)
 }
 

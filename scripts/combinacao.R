@@ -53,7 +53,7 @@ ms_dados <- function(dados,
   fim <- max(dados$data)
   
   serie <- zoo::zoo(x = dados$valor, 
-                    order.by = dados$data)
+                    order.by = as.Date(dados$data))
   
   meta <- c(meta,
             list(fim = fim))
